@@ -1,0 +1,23 @@
+{
+  "name": "atropa",
+  "version": "1.0",
+  "icons": {
+    "16": "a16.png",
+    "48": "a48.png",
+    "128": "a128.png"
+  },
+  "manifest_version": 2,
+  "content_security_policy": "script-src 'self' https://atropa.wurstcase.net; object-src 'self'",
+  "permissions": [
+    "tabs",
+    "http://atropa.wurstcase.net/*"
+  ],
+  "background": {
+    "page": "html/background.html"
+  },
+  "page_action": {
+    "default_icon": "img/default.png",
+    "default_title": "Add to atropa",
+    "default_popup": "html/popup.html"
+  }
+}
