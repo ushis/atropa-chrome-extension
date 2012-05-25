@@ -5,75 +5,101 @@
  * @requires  sha1.js
  */
 (function($) {
-  $(document).ready(function() {
-    var atropa = {
-      uri: 'https://atropa.wurstcase.net',
-      api: '/api/videos/create.json?',
-      edit: '/admin/videos/{id}/edit'
-    };
+  var ATROPA = {
+    BASE: 'https://atropa.wurstcase.net',
+    API: {
+      CREATE: '/api/videos/create.json?'
+    },
+    ADMIN: {
+      EDIT: '/admin/videos/{id}/edit'
+    },
+  };
 
-    var isLoading = false;
-    var submit = $('#submit');
-    var inputs = $('#auth-form input');
+  function Popup(tab, submit, inputs) {
+    this.isLoading = false;
+    this.submit = submit;
+    this.inputs = inputs;
+    this.tab = tab;
 
-    submit.considerVisibility = function() {
-      if (localStorage.username && localStorage.apikey) {
-        submit.show();
+    this.considerSubmitButton = function() {
+      if ( ! this.tab.isAtropa() && localStorage.username && localStorage.apikey) {
+        this.submit.show();
       } else {
-        submit.hide();
+        this.submit.hide();
       }
-
-      return this;
     };
 
-    submit.considerVisibility().bind('submitting', function() {
-      isLoading = true;
-      $(this).text('Submitting..').addClass('load');
-    }).bind('submittingEnd', function(e, error) {
-      $(this).removeClass('load').text(error ? 'Something\'s wrong' : 'Submit Video');
-      isLoading = false;
-    }).click(function() {
-      if (isLoading) {
-        return false;
-      }
+    this.startLoading = function() {
+      this.isLoading = true;
+      this.submit.addClass('load').text('Submitting..');
 
-      submit.trigger('submitting');
-
-      chrome.tabs.getSelected(function(tab) {
-        var path = atropa.api + $.param({
-          username: localStorage.username,
-          url: tab.url,
-        });
-
-        $.ajax({
-          url: atropa.uri + path,
-          dataType: 'jsonp',
-          beforeSend: function(xhr, settings) {
-            signature = CryptoJS.SHA1(settings.url.substr(28) + localStorage.apikey);
-            settings.url += '&signature=' + signature.toString(CryptoJS.enc.HEX);
-          },
-          success: function(data) {
-            chrome.tabs.create({
-              index: tab.index + 1,
-              url: atropa.uri + atropa.edit.replace('{id}', data.id),
-              active: true
-            });
-
-            submit.trigger('submittingEnd');
-          },
-        });
-
+      (function(popup) {
         setTimeout(function() {
-          isLoading && submit.trigger('submittingEnd', true);
+          popup.isLoading && popup.stopLoading(false);
         }, 7000);
-      });
-    });
+      })(this);
+    };
 
-    inputs.each(function() {
-      $(this).change(function() {
-        localStorage[$(this).attr('name')] = $(this).val().trim();
-        submit.considerVisibility();
-      }).val(localStorage[$(this).attr('name')]);
+    this.stopLoading = function(success) {
+      this.isLoading = false;
+      this.submit.removeClass('load').text(success ? 'Submit Video' : 'Something\'s wrong');
+    }
+
+    this.considerSubmitButton();
+
+    (function(popup) {
+      popup.inputs.each(function() {
+        $(this).data('old', $(this).val());
+
+        $(this).bind('propertychange keyup input paste', function() {
+          if ($(this).data('old') == $(this).val()) {
+            return;
+          }
+
+          $(this).data('old', $(this).val());
+          localStorage[$(this).attr('name')] = $(this).val().trim();
+          popup.considerSubmitButton();
+        }).val(localStorage[$(this).attr('name')]);
+      });
+    })(this);
+
+    (function(popup) {
+      $.ajaxSetup({
+        dataType: 'jsonp',
+        beforeSend: function(xhr, settings) {
+          popup.startLoading();
+          signature = CryptoJS.SHA1(settings.url.substr(28) + localStorage.apikey);
+          settings.url += '&signature=' + signature.toString(CryptoJS.enc.HEX);
+        },
+        success: function(data) {
+          popup.stopLoading(true);
+
+          chrome.tabs.create({
+            index: popup.tab.index + 1,
+            url: ATROPA.BASE + ATROPA.ADMIN.EDIT.replace('{id}', data.id),
+            active: true
+          });
+        }
+      });
+    })(this);
+
+    (function(popup) {
+      popup.submit.click(function() {
+        if ( ! popup.isLoading) {
+          var query = $.param({url: popup.tab.url, username: localStorage.username});
+          $.ajax(ATROPA.BASE + ATROPA.API.CREATE + query);
+        }
+      });
+    })(this);
+  }
+
+  $(document).ready(function() {
+    chrome.tabs.getSelected(function(tab) {
+      tab.isAtropa = function() {
+        return Boolean(this.url.match(/http(?:s)?:\/\/atropa.wurstcase.net[^\n]*/))
+      };
+
+      var popup = new Popup(tab, $('#submit'), $('#auth-form input'));
     });
   });
 })(jQuery);

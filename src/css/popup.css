@@ -19,6 +19,7 @@ h1 a {
 }
 
 #submit {
+  display: none;
   margin: 6px 0 0 0;
   padding: 6px 8px;
   text-align: center;
