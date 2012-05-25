@@ -1,17 +1,14 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then
-  printf 'usage: %s <version>\n' "$0"
-  exit 1
-fi
+v="$(grep '"version"' ./src/manifest.json | cut -d'"' -f4)"
 
-printf 'Packing extension\n'
+printf 'Packing extension version %s\n' "$v"
 google-chrome --pack-extension=./src --pack-extension-key=../atropa.pem
 
 [ $? -ne 0 ] && exit 1
 
-printf 'Moving extension to ./atropa-%s.crx\n' "$1"
-mv ./src.crx "./atropa-${1}.crx"
+printf 'Moving extension to ./atropa-%s.crx\n' "$v"
+mv ./src.crx "./atropa-${v}.crx"
 
 [ $? -ne 0 ] && exit 1
 
@@ -20,7 +17,7 @@ cat > updates.xml <<XML
 <?xml version='1.0' encoding='UTF-8'?>
 <gupdate xmlns='http://www.google.com/update2/response' protocol='2.0'>
   <app appid='cjgkmppojkdgopibnbpgaohgfajiipjk'>
-    <updatecheck codebase='https://github.com/downloads/ushis/atropa-chrome-extension/atropa-${1}.crx' version='${1}'/>
+    <updatecheck codebase='https://github.com/downloads/ushis/atropa-chrome-extension/atropa-${v}.crx' version='${v}'/>
   </app>
 </gupdate>
 XML
