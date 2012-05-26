@@ -4,6 +4,7 @@
 var patterns = [
   /http:\/\/vimeo\.com\/[0-9]+/,
   /http(?:s)?:\/\/(?:www\.)?youtube\.com[^ \n]*[\?&]v=[^ &\n]+/,
+  /http(?:s)?:\/\/www\.dailymotion\.com\/video\/[^_]+/,
   /http(?:s)?:\/\/atropa.wurstcase.net\/admin\/profile/
 ];
 
