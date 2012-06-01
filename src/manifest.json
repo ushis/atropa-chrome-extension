@@ -1,6 +1,6 @@
 {
   "name": "atropa",
-  "version": "1.2",
+  "version": "1.3",
   "description": "Add videos to atropa - the easy way",
   "homepage_url": "https://github.com/ushis/atropa-chrome-extension",
   "update_url": "https://github.com/ushis/atropa-chrome-extension/raw/master/updates.xml",
@@ -10,10 +10,9 @@
     "128": "a128.png"
   },
   "manifest_version": 2,
-  "content_security_policy": "script-src 'self' https://atropa.wurstcase.net; object-src 'self'",
   "permissions": [
     "tabs",
-    "http://atropa.wurstcase.net/*"
+    "https://atropa.wurstcase.net/"
   ],
   "background": {
     "page": "html/background.html"

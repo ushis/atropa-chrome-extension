@@ -5,14 +5,16 @@
  * @requires  sha1.js
  */
 (function($) {
-  var ATROPA = {
+  var Atropa = {
     BASE: 'https://atropa.wurstcase.net',
     API: {
-      CREATE: '/api/videos/create.json?'
+      VIDEOS: '/api/videos.json?',
+      VIDEO: '/api/videos/{id}.json?'
     },
     ADMIN: {
-      EDIT: '/admin/videos/{id}/edit'
-    },
+      VIDEOS: '/admin/videos',
+      VIDEO: '/admin/videos/{id}/edit'
+    }
   };
 
   function Popup(tab, submit, inputs) {
@@ -32,63 +34,65 @@
     this.startLoading = function() {
       this.isLoading = true;
       this.submit.addClass('load').text('Submitting..');
-
-      (function(popup) {
-        setTimeout(function() {
-          popup.isLoading && popup.stopLoading(false);
-        }, 7000);
-      })(this);
     };
 
-    this.stopLoading = function(success) {
+    this.stopLoading = function(message) {
       this.isLoading = false;
-      this.submit.removeClass('load').text(success ? 'Submit Video' : 'Something\'s wrong');
+      this.submit.removeClass('load').text(message || 'Submit Video');
     }
+
+    this.sign = function(s) {
+      return CryptoJS.SHA1(s + localStorage.apikey).toString(CryptoJS.enc.HEX);
+    };
 
     this.considerSubmitButton();
 
     (function(popup) {
       popup.inputs.each(function() {
-        $(this).data('old', $(this).val());
+        var name = $(this).attr('name');
 
         $(this).bind('propertychange keyup input paste', function() {
-          if ($(this).data('old') == $(this).val()) {
-            return;
-          }
+          var val = $(this).val().trim();
 
-          $(this).data('old', $(this).val());
-          localStorage[$(this).attr('name')] = $(this).val().trim();
-          popup.considerSubmitButton();
-        }).val(localStorage[$(this).attr('name')]);
+          if (localStorage[name] !== val) {
+            localStorage[name] = val;
+            popup.considerSubmitButton();
+          }
+        }).val(localStorage[name]);
       });
     })(this);
 
     (function(popup) {
       $.ajaxSetup({
-        dataType: 'jsonp',
+        type: 'post',
+        dataType: 'json',
         beforeSend: function(xhr, settings) {
           popup.startLoading();
-          signature = CryptoJS.SHA1(settings.url.substr(28) + localStorage.apikey);
-          settings.url += '&signature=' + signature.toString(CryptoJS.enc.HEX);
+          settings.url += settings.data;
+          settings.data = $.param({
+            signature: popup.sign(settings.url),
+            username: localStorage.username
+          });
+          settings.url = Atropa.BASE + settings.url;
         },
         success: function(data) {
-          popup.stopLoading(true);
+          popup.stopLoading();
 
           chrome.tabs.create({
             index: popup.tab.index + 1,
-            url: ATROPA.BASE + ATROPA.ADMIN.EDIT.replace('{id}', data.id),
+            url: Atropa.BASE + Atropa.ADMIN.VIDEO.replace('{id}', data.id),
             active: true
           });
+        },
+        error: function(xhr, stat, error) {
+          popup.stopLoading(xhr.responseText);
         }
       });
     })(this);
 
     (function(popup) {
       popup.submit.click(function() {
-        if ( ! popup.isLoading) {
-          var query = $.param({url: popup.tab.url, username: localStorage.username});
-          $.ajax(ATROPA.BASE + ATROPA.API.CREATE + query);
-        }
+        popup.isLoading || $.ajax({url: Atropa.API.VIDEOS, data: {url: popup.tab.url}});
       });
     })(this);
   }
