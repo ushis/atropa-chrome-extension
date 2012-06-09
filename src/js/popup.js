@@ -42,7 +42,7 @@
     }
 
     this.sign = function(s) {
-      return CryptoJS.SHA1(s + localStorage.apikey).toString(CryptoJS.enc.HEX);
+      return CryptoJS.HmacSHA1(s, localStorage.apikey).toString();
     };
 
     this.considerSubmitButton();
